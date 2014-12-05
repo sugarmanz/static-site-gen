@@ -1,6 +1,0 @@
-Name: Jeremiah Zucker
-Email: jrz6220@rit.edu
-Facebook: https://www.facebook.com/SugarManZ
-LinkedIn:
-GitHub: https://github.com/sugarmanz
-Occupation: Computer Engineer, Student @ Rochester Institute of Technology
