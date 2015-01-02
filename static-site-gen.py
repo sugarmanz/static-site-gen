@@ -1,41 +1,57 @@
 """
 static-site-gen.py
 
-This program will take input from a config.txt
-and create fill out templates
+This program allows a user to quickly fill out '.html'
+templates using various text files. The goal is to allow
+a user to develop a website using variables and then be
+able to quickly fill in the variables by running this
+program and save the new '.html' file without destroying
+the old. This allows for very quick changes to one text
+file that will change the rest of the website, saving
+lots of precious time. There are several different useful
+operations a user may do, such as create a post or change
+the config.txt file.
 
 Author: Jeremiah Zucker
 """
 
 import os
+import shutil
+from django.utils.datetime_safe import datetime
+
+class Post:
+    attributes = ["name","date","description","full"]
+    def __init__(self, name, date, description, full):
+        self.name = name
+        self.date = date
+        self.description = description
+        self.full = full
+
+    def get(self, arg):
+        if arg == "name":
+            return self.name
+        elif arg == "date":
+            return self.date
+        elif arg == "description":
+            return self.description
+        elif arg == "full":
+            return self.full
+        else:
+            return None
 
 def main():
     checkReadme()
     checkDir()
+    checkConfig()
     info = dict()
-    filename = "Content/config.txt"
-    try:
-        config = open(filename,"r")
-    except FileNotFoundError:
-        if (input("Config.txt not found. Setup directory? (y/n) ") == "y"):
-            setup()
-        else:
-            print("Setup cancelled.")
-            input("Press ENTER to close.")
-            return
-        config = open(filename,"r")
-    info = fillDict(info)
-    config.close()
-    posts = {}
     task = input("What would you like to do? ('h' for help) ")
     while (task != "q" and task != "Q"):
+        info = fillDict(info)
         if (task == "a" or task == "A"):
-            """
-            Add a post object.
-            """
+            createPost()
         elif (task == "g" or task == "G"):
             print("Generate site.")
-            createSite(info, posts)
+            createSite(info)
         elif (task == "h" or task == "H"):
             print("(A)dd posts, (G)enerate pages, (H)elp, (I)nformation, (U)pdate config.txt, (Q)uit")
         elif (task == "i" or task == "I"):
@@ -74,6 +90,20 @@ def checkReadme():
 def checkDir():
     print("Checking directory...")
     setupDir()
+
+def checkConfig():
+    filename = "Content/config.txt"
+    try:
+        config = open(filename,"r")
+    except FileNotFoundError:
+        if (input("Config.txt not found. Setup directory? (y/n) ") == "y"):
+            setup()
+        else:
+            print("Setup cancelled.")
+            input("Press ENTER to close.")
+            return
+        config = open(filename,"r")
+    config.close()
 
 def setup():
     setupConfig()
@@ -182,39 +212,42 @@ def fillDict(info):
     config.close()
     return info
 
-def newRootName():
-    x = 0
-    while (x == 0):
-        currRoot = os.getcwd()
-        newRoot = input("New folder name (if left blank, will become 'Your Name's Website': ")
-        if (newRoot == ""):
-            while currRoot[-1] != "\\":
-                currRoot = currRoot[:-1]
-            file = open("Content/config.txt")
-            name = ""
+def getPostList():
+    ListPost = []
+    for post in os.listdir(os.getcwd()+"\\Content\\Posts"):
+        if post[-4:] == ".txt":
+            file = open(os.getcwd()+"\\Content\\Posts\\"+post,'r')
             for line in file:
-                if line.find("Name: ") > -1:
-                    name = line[6:].strip("\n")
-            if name == "":
-                name = "Fail"
-            newPath = currRoot+name
-            if not os.path.exists(newPath):
-                os.makedirs(newPath)
-                x = x + 1
-            else:
-                print("Folder already exists. Please choose another name.")
-        else:
-            while currRoot[-1] != "\\":
-                currRoot = currRoot[:-1]
-            newPath = currRoot+newRoot
-            if not os.path.exists(newPath):
-                os.makedirs(newPath)
-                x = x + 1
-            else:
-                print("Folder already exists. Please choose another name.")
+                if line[:6] == "Name: ":
+                    name = line[6:]
+                elif line[:6] == "Date: ":
+                    date = line[6:]
+                elif line[:13] == "Description: ":
+                    description = line[13:]
+                    line = file.readline()
+                    while line[:6] != "Full: " and line != "":
+                        description = description + line
+                        line = file.readline()
+                    full = line[6:]
+                    line = file.readline()
+                    while line != "":
+                        full = full + line
+                        line = file.readline()
+                elif line[:6] == "Full: ":
+                    full = line[6:]
+                    desline = file.readline()
+                    while desline != "":
+                        full = full + desline
+                        desline = file.readline()
+            try:
+                ListPost.append(Post(name.strip("\n"),date.strip("\n"),description,full))
+            except UnboundLocalError:
+                print("\nError in file. "+post+" not properly formatted.")
+    return ListPost
 
-def createSite(variableDict,listPost):
+def createSite(variableDict):
     files = []
+    listPost = getPostList()
     for html in os.listdir(os.getcwd()+"\\Templates"):
                 if html[-5:] == ".html":
                     files.append(html)
@@ -223,10 +256,10 @@ def createSite(variableDict,listPost):
                         for post in listPost:
                             files.append(post.name+".html")
     if len(files) == 0:
-        print("\nThere are no templates found!\nPlease make sure that your templates are in the templates folder.\n\nOperation cancelled. No files created.\n")
+        print("\nThere are no templates found!\nPlease make sure that your templates are in the templates folder.\nOperation cancelled. No files created.\n")
         return
-    
-    ("\nWARNING: This will replace all HTML files in the SiteHTMLs\nfolder with the same name as those generated here.\n\nFor a list of files that will be affected,\ntype 'f'. Otherwise 'y' to continue, or ENTER to cancel.")
+
+    print("\nWARNING: This will replace all HTML files in the SiteHTMLs\nfolder with the same name as those generated here.\n\nFor a list of files that will be affected, type 'f'.\nOtherwise 'y' to continue, or ENTER to cancel.")
     warning = input("(f/y/n) ")
     while warning != 'y' and warning != 'Y':
         if warning == 'f':
@@ -252,14 +285,16 @@ def createSite(variableDict,listPost):
             print(html+" written!")
         elif os.path.exists(os.getcwd()+"\\Templates\\"+html):
             if html == "Posts":
+
                 for post in listPost:
                     print("Writing "+post.name+".html...")
-                    file = open("Templates/Posts/"+html,"r")
+                    file = open("Templates/Posts/posts.html","r")
                     newFile = open("SiteHTMLs/Posts/"+post.name+".html","w+")
                     text = file.read()
                     for attribute in post.attributes:
-                        text = text.replace("{{ "+attribute+" }}",post.attribute)
-                        text = text.replace("{{"+attribute+"}}",post.attribute)
+                        getAttribute = post.get(attribute)
+                        text = text.replace("{{ "+attribute+" }}",getAttribute)
+                        text = text.replace("{{"+attribute+"}}",getAttribute)
                     for key in variableDict:
                         text = text.replace("{{ "+key+" }}",variableDict.get(key))
                         text = text.replace("{{"+key+"}}",variableDict.get(key))
@@ -268,6 +303,34 @@ def createSite(variableDict,listPost):
                     newFile.close()
                     print(post.name+".html written!")
     print("Site files generated successfully!\n")
+
+def createPost():
+    name = input("Name: ")
+    while len(name) < 1:
+        name = input("Name must be at least 1 character or longer.\nName: ")
+    date = input("Date (Leave blank for today's date): ")
+    if date == "":
+        date = datetime.now()
+    print("NOTE: It is recommended to type out the 'description' and the 'full'\nfor the post in a text editor, rather than this prompt.\nTo do so, just navigate to Content\Posts and edit the '.txt'.")
+    description = input("Description: ")
+    full = input("Full: ")
+    okay = False
+    try:
+        while (okay == False):
+            post = open("Content/Posts/"+name+".txt")
+            if input("Content/Posts/"+name+".txt will be deleted. Continue? (y) ") != "y":
+                if input("Rename Post? (y) ") == "y":
+                    name = input("Name: ")
+                else:
+                    return
+            else:
+                okay = True
+            post.close()
+        post = open("Content/Posts/"+name+".txt","w+")
+    except FileNotFoundError:
+        post = open("Content/Posts/"+name+".txt","a+")
+    post.write("Name: "+name+"\nDate: "+str(date)+"\nDescription: "+description+"\nFull"+full)
+    post.close()
 
 
 main()
