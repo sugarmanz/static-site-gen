@@ -329,7 +329,7 @@ def createPost():
         post = open("Content/Posts/"+name+".txt","w+")
     except FileNotFoundError:
         post = open("Content/Posts/"+name+".txt","a+")
-    post.write("Name: "+name+"\nDate: "+str(date)+"\nDescription: "+description+"\nFull"+full)
+    post.write("Name: "+name+"\nDate: "+str(date)+"\nDescription: "+description+"\nFull: "+full)
     post.close()
 
 
